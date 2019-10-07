@@ -20,7 +20,7 @@ func Test_randCounterValT_Next(t *testing.T) {
 	for i < 10 {
 		i++
 		val := counter.Next()
-		fmt.Fprintf(os.Stdout, "Counter %d: %d\n", i, int(val))
+		fmt.Fprintf(os.Stdout, "Counter %d: %d\n", val.Seq, int(val.Val))
 	}
 }
 
@@ -38,6 +38,6 @@ func Test_randGaugeValT_Next(t *testing.T) {
 	for i < 10 {
 		i++
 		val := counter.Next()
-		fmt.Fprintf(os.Stdout, "Gauge %d: %d\n", i, int(val))
+		fmt.Fprintf(os.Stdout, "Gauge %d: %d\n", val.Seq, int(val.Val))
 	}
 }

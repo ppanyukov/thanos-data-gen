@@ -6,9 +6,18 @@ import (
 	"math/rand"
 )
 
+// Val is the numeric value with sequence number.
+type Val struct {
+	// Seq is the sequence number of the value.
+	Seq int64
+
+	// Val is the actual value.
+	Val float64
+}
+
 // ValSeq is the interface for getting an infinite sequence of values.
 type ValSeq interface {
-	Next() float64
+	Next() Val
 }
 
 // Config is the configuration for the value generators.
@@ -46,9 +55,12 @@ func NewRandCounterVal(config Config) ValSeq {
 	changeRand := rand.New(changeRandSource)
 
 	return &randCounterValT{
-		config:       config,
-		currentValue: config.MinValue,
-		changeRand:   changeRand,
+		config: config,
+		currentValue: Val{
+			Seq: 0,
+			Val: config.MinValue,
+		},
+		changeRand: changeRand,
 	}
 }
 
@@ -58,49 +70,54 @@ func NewRandGaugeVal(config Config) ValSeq {
 	changeRand := rand.New(changeRandSource)
 
 	return &randGaugeValT{
-		config:       config,
-		currentValue: config.MinValue,
-		changeRand:   changeRand,
+		config: config,
+		currentValue: Val{
+			Seq: 0,
+			Val: config.MinValue,
+		},
+		changeRand: changeRand,
 	}
 }
 
 // randCounterValT implements counter `ValSeq`: monotonic increase in value.
 type randCounterValT struct {
 	config       Config
-	currentValue float64
+	currentValue Val
 	changeRand   *rand.Rand
 }
 
-func (c *randCounterValT) Next() float64 {
+func (c *randCounterValT) Next() Val {
 	// monotonic increase like so:
 	//  nextValue = currentValue + (rand baseChange)
 	actualChange := c.config.MaxChangeValue * c.changeRand.Float64()
-	nextValue := c.currentValue + actualChange
+	nextValue := c.currentValue.Val + actualChange
 
 	// reset to min if out of bounds
 	if nextValue > c.config.MaxValue || nextValue < c.config.MinValue {
 		nextValue = c.config.MinValue
 	}
 
-	c.currentValue = nextValue
+	c.currentValue.Seq += 1
+	c.currentValue.Val = nextValue
 	return c.currentValue
 }
 
 // randCounterValT implements gauge `ValSeq`: value which goes between min and max.
 type randGaugeValT struct {
 	config       Config
-	currentValue float64
+	currentValue Val
 	changeRand   *rand.Rand
 }
 
-func (c *randGaugeValT) Next() float64 {
+func (c *randGaugeValT) Next() Val {
 	// fluctuate like so:
 	//  nextValue = currentValue +/- (baseChange +/- jitter)
 	actualChange := c.config.MaxChangeValue * 2 * (c.changeRand.Float64() - 0.5)
-	nextValue := c.currentValue + actualChange
+	nextValue := c.currentValue.Val + actualChange
 	nextValue = math.Min(nextValue, c.config.MaxValue)
 	nextValue = math.Max(nextValue, c.config.MinValue)
 
-	c.currentValue = nextValue
+	c.currentValue.Seq += 1
+	c.currentValue.Val = nextValue
 	return c.currentValue
 }
