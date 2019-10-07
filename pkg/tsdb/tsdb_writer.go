@@ -15,6 +15,73 @@ import (
 )
 
 func newWriterT(logger log.Logger, dir string) (*writerT, error) {
+	res := &writerT{
+		logger: logger,
+		dir:    dir,
+	}
+
+	if err := res.initHeadAndAppender(); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
+// writerT is implementation of Writer interface
+type writerT struct {
+	// logger is given to us as arg
+	logger log.Logger
+
+	// dir is output directory, given to us as arg
+	dir string
+
+	// prometheus specific things, created by us
+	head     *tsdb.Head
+	appender tsdb.Appender
+
+	// metricCount is incremented internally every time we call Write
+	metricCount int64
+}
+
+func (w *writerT) Write(t time.Time, v Val) error {
+	// Simply write to appender until Flush() is called.
+	w.metricCount++
+
+	if _, err := w.appender.Add(v.Labels(), timestamp.FromTime(t), v.Val()); err != nil {
+		return errors.Wrap(err, "appender.Add")
+	}
+
+	return nil
+}
+
+func (w *writerT) Flush() error {
+	// Flush should:
+	//  - write head to disk
+	//  - close head
+	//  - open new head and appender
+	if err := w.writeHeadToDisk(); err != nil {
+		return errors.Wrap(err, "writeHeadToDisk")
+	}
+
+	if err := w.head.Close(); err != nil {
+		return errors.Wrap(err, "close head")
+	}
+
+	if err := w.initHeadAndAppender(); err != nil {
+		return errors.Wrap(err, "initHeadAndAppender")
+	}
+
+	return nil
+}
+
+func (w *writerT) Close() error {
+	return w.head.Close()
+}
+
+// initHeadAndAppender creates and initialises new head and appender.
+func (w *writerT) initHeadAndAppender() error {
+	logger := w.logger
+
 	var head *tsdb.Head
 	{
 		// r and w can be nil as we don't use them
@@ -27,59 +94,26 @@ func newWriterT(logger log.Logger, dir string) (*writerT, error) {
 
 		h, err := tsdb.NewHead(r, logger, w, chunkRange)
 		if err != nil {
-			return nil, err
+			return errors.Wrap(err, "tsdb.NewHead")
 		}
 
 		head = h
 	}
 
-	var appender tsdb.Appender = head.Appender()
-
-	return &writerT{
-		logger:   logger,
-		dir:      dir,
-		head:     head,
-		appender: appender,
-	}, nil
-}
-
-// writerT is implementation of Writer interface
-type writerT struct {
-	logger log.Logger
-
-	// dir is output directory
-	dir string
-
-	// prometheus specific things
-	head     *tsdb.Head
-	appender tsdb.Appender
-
-	metricCount int64
-}
-
-func (w *writerT) Write(t time.Time, v Val) error {
-	w.metricCount++
-	//level.Info(w.logger).Log("metric", w.metricCount, "time", t, "val", v.Val())
-
-	if _, err := w.appender.Add(v.Labels(), timestamp.FromTime(t), v.Val()); err != nil {
-		return errors.Wrap(err, "appender.Add")
-	}
-
+	w.head = head
+	w.appender = head.Appender()
 	return nil
 }
 
-func (w *writerT) Flush() error {
+// writeHeadToDisk commits the appender and writes the head to disk.
+func (w *writerT) writeHeadToDisk() error {
 	if err := w.appender.Commit(); err != nil {
 		return errors.Wrap(err, "appender.Commit")
 	}
-
 	seriesCount := w.head.NumSeries()
 	mint := timestamp.Time(w.head.MinTime())
 	maxt := timestamp.Time(w.head.MaxTime())
-
 	level.Info(w.logger).Log("series_count", seriesCount, "metric_count", w.metricCount, "mint", mint, "maxt", maxt)
-
-
 	// Step 2. Flush head to disk.
 	//
 	// copypasta from: github.com/prometheus/prometheus/tsdb/db.go:322
@@ -90,6 +124,7 @@ func (w *writerT) Flush() error {
 		int_mint := timestamp.FromTime(mint)
 		int_maxt := timestamp.FromTime(maxt)
 
+		// TODO(ppanyukov): what exactly is "ranges" arg here?
 		compactor, err := tsdb.NewLeveledCompactor(context.Background(), nil, w.logger, tsdb.DefaultOptions.BlockRanges, chunkenc.NewPool())
 		if err != nil {
 			return errors.Wrap(err, "create leveled compactor")
@@ -98,8 +133,4 @@ func (w *writerT) Flush() error {
 		_, err = compactor.Write(w.dir, w.head, int_mint, int_maxt+1, nil)
 		return errors.Wrap(err, "writing WAL")
 	}
-}
-
-func (w *writerT) Close() error {
-	return w.head.Close()
 }

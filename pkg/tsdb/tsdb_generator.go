@@ -1,44 +1,16 @@
 package tsdb
 
-import (
-	"github.com/prometheus/prometheus/tsdb/labels"
-	"time"
-)
+import "time"
 
-// Val is the named value without to write to time series db.
-type Val interface {
-	Val() float64
-	Labels() labels.Labels
+// generatorT is implementation of Generator.
+type generatorT struct {
+	retention      time.Duration
+	sampleInterval time.Duration
+	flushInterval  time.Duration
+	valGenerators  []ValGenerator
 }
 
-// ValGenerator is the generator of synthetic values.
-type ValGenerator interface {
-	Next() Val
-}
-
-// Writer is interface to write time series into Prometheus blocks.
-type Writer interface {
-	// Writes one value, into memory.
-	// TODO(ppanyukov): how about re-using tsdb.Appendable instead?
-	Write(t time.Time, v Val) error
-
-	// Flush writes current block to disk.
-	Flush() error
-
-	// Close closes everything
-	Close() error
-}
-
-// Generator generates synthetic time series using specified profile.
-type Generator interface {
-	Generate(writer Writer) error
-}
-
-// Sample pseudo-code implementation of Generator.
-type noddyTsdbGenerator struct {
-}
-
-func (g *noddyTsdbGenerator) Generate(writer Writer) error {
+func (g *generatorT) Generate(writer Writer) error {
 	// assume we have these somehow
 	var generators []ValGenerator
 
@@ -47,15 +19,15 @@ func (g *noddyTsdbGenerator) Generate(writer Writer) error {
 	//  - sampleInterval: the gap between samples
 	//  - flushInterval: the amount of time to go to blocks
 	// we want to generate TS data for 30 days
-	retention := 30 * 24 * time.Hour
+	retention := g.retention
 
 	// all metrics will come in 15s interval, the default?
-	sampleInterval := 15 * time.Second
+	sampleInterval := g.sampleInterval
 
 	// flushInterval is the size of the block to write to TSDB
 	// NOTE: the blocks need to be precisely 2h, 8h etc.
 	//   some extra logic around this needs to be present.
-	flushInterval := 2 * time.Hour
+	flushInterval := g.flushInterval
 
 	// flush and close on exit
 	defer writer.Flush()

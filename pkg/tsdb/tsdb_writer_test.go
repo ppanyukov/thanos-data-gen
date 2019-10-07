@@ -10,7 +10,7 @@ import (
 
 func Test_newWriterT(t *testing.T) {
 	logger := log.NewLogfmtLogger(os.Stdout)
-	w, err := newWriterT(logger, "/Users/philip/zzz")
+	w, err := newWriterT(logger, "/Users/philip/zzz-prom-data/zzz")
 	if err != nil {
 		t.Error(err)
 	}
