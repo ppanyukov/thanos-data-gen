@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-func newWriterT(logger log.Logger, dir string) (*writerT, error) {
+func NewWriter(logger log.Logger, dir string) (Writer, error) {
 	res := &writerT{
 		logger: logger,
 		dir:    dir,

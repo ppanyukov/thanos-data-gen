@@ -8,9 +8,9 @@ import (
 	"time"
 )
 
-func Test_newWriterT(t *testing.T) {
+func Test_Writer_Write(t *testing.T) {
 	logger := log.NewLogfmtLogger(os.Stdout)
-	w, err := newWriterT(logger, "/Users/philip/zzz-prom-data/zzz")
+	w, err := NewWriter(logger, "/Users/philip/zzz-prom-data/zzz")
 	if err != nil {
 		t.Error(err)
 		return
