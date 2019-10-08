@@ -29,9 +29,11 @@ type Writer interface {
 	Close() error
 }
 
-// Generator generates synthetic time series using specified profile.
+// Generator generates synthetic time series using synthetic
+// values produced by supplied list of `ValGenerator` and
+// writes them to TSDB blocks using supplied `Writer`.
 type Generator interface {
-	Generate(writer Writer) error
+	Generate(writer Writer, valGenerators ...ValGenerator) error
 }
 
 // Sample pseudo-code implementation of Generator.
