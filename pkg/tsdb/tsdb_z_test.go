@@ -40,8 +40,6 @@ func runGenerator() error {
 		}
 	}()
 
-	logger := log.NewLogfmtLogger(os.Stderr)
-
 	// Generate 2 metrics from 3 targets.
 	valProviderConfig := ValProviderConfig{
 		MetricCount: 2,
@@ -51,12 +49,13 @@ func runGenerator() error {
 	valProvider := NewValProvider(valProviderConfig)
 
 	// Custom generator config to make it faster :)
-	generatorConfig := DefaultGeneratorConfig(10 * time.Minute)
-	generatorConfig.SampleInterval = 1 * time.Second
+	generatorConfig := DefaultGeneratorConfig(2 * time.Minute)
+	generatorConfig.SampleInterval = 15 * time.Second
 	generatorConfig.FlushInterval = 2 * time.Minute
-	generator := NewGenerator(2 * time.Hour)
+	generator := NewGenerator2(generatorConfig)
 
-	// Create block writer.
+	// Create block writer to write to dir
+	logger := log.NewLogfmtLogger(os.Stderr)
 	blockWriter, err := NewWriter(logger, dir)
 	if err != nil {
 		return err

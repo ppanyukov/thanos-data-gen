@@ -47,12 +47,19 @@ func DefaultGeneratorConfig(retention time.Duration) GeneratorConfig {
 	}
 }
 
-// NewGenerator create a generator with specified retention
+// NewGenerator creates a generator with specified retention
 // and default config, see `DefaultGeneratorConfig()`.
 // Retention is the time period for which data will be generated.
 func NewGenerator(retention time.Duration) Generator {
 	config := DefaultGeneratorConfig(retention)
 
+	return &generatorT{
+		config: config,
+	}
+}
+
+// NewGenerator2 creates a generator with user-supplied config.
+func NewGenerator2(config GeneratorConfig) Generator {
 	return &generatorT{
 		config: config,
 	}
