@@ -5,20 +5,12 @@ import (
 	"time"
 )
 
-// NewGenerator create a generator with specified retention
-// and default config, see `newGeneratorConfig()`.
-// Retention is the time period for which data will be generated.
-func NewGenerator(retention time.Duration) Generator {
-	return &generatorT{
-		Retention:      retention,
-		StartTime:      time.Now(),
-		SampleInterval: 15 * time.Second,
-		FlushInterval:  2 * time.Hour,
-	}
-}
-
-// generatorT is implementation of Generator.
-type generatorT struct {
+// GeneratorConfig configures the behaviour of TSDB generator.
+//
+// NOTE: it is surfaced here as there may be a need to
+// fine-tune some of these values, and esp. FlushInterval
+// by the callers.
+type GeneratorConfig struct {
 	// Retention is the time interval for which to generate data, e.g. 8days = 8 * 24 * time.Hour.
 	// This is how much time back from `startTime` the metrics will be generated.
 	// Retention should be multiples of `FlushInterval`.
@@ -35,12 +27,46 @@ type generatorT struct {
 	// SampleInterval is the interval between samples, say 15s.
 	SampleInterval time.Duration
 
-	// FlushInterval is the interval at which blocks are written to disk. These are usually 2h.
+	// FlushInterval is the interval at which blocks are written to disk.
+	// These are usually 2h.
 	// FlushInterval should be multiples of `SampleInterval`.
+	//
+	// NOTE: Flush is generally slow. Consider tuning this if
+	// you have little data or a lot of data.
 	FlushInterval time.Duration
 }
 
-func (c *generatorT) Generate(writer Writer, valGenerators ...ValGenerator) error {
+// DefaultGeneratorConfig is the default configuration with
+// specified retention.
+func DefaultGeneratorConfig(retention time.Duration) GeneratorConfig {
+	return GeneratorConfig{
+		Retention:      retention,
+		StartTime:      time.Now(),
+		SampleInterval: 15 * time.Second,
+		FlushInterval:  2 * time.Hour,
+	}
+}
+
+// NewGenerator create a generator with specified retention
+// and default config, see `DefaultGeneratorConfig()`.
+// Retention is the time period for which data will be generated.
+func NewGenerator(retention time.Duration) Generator {
+	config := DefaultGeneratorConfig(retention)
+
+	return &generatorT{
+		config: config,
+	}
+}
+
+// generatorT is implementation of Generator.
+type generatorT struct {
+	config GeneratorConfig
+}
+
+// Generate implements Generator interface.
+func (g *generatorT) Generate(writer Writer, valGenerators ...ValProvider) error {
+	c := &g.config
+
 	// Basic sanity checks.
 	if c.Retention <= 0 {
 		return errors.New("retention must be positive duration")
@@ -78,11 +104,16 @@ func (c *generatorT) Generate(writer Writer, valGenerators ...ValGenerator) erro
 
 		// grab values form generators, timestamp them and shove to the writer.
 		for _, generator := range valGenerators {
-			val := generator.Next()
-			if err := writer.Write(now, val); err != nil {
-				return errors.Wrap(err, "writer.Write")
+			c := generator.Next()
+
+			for val := range c {
+				if err := writer.Write(now, val); err != nil {
+					return errors.Wrap(err, "writer.Write")
+				}
 			}
 		}
+
+		elapsed += c.SampleInterval
 
 		// Flush to disk when written enough data.
 		if elapsed >= c.FlushInterval {
@@ -92,6 +123,11 @@ func (c *generatorT) Generate(writer Writer, valGenerators ...ValGenerator) erro
 
 			elapsed = 0
 		}
+	}
+
+	// NOTE: no defer write.Flush on purpose
+	if err := writer.Flush(); err != nil {
+		return errors.Wrap(err, "last writer.Flush")
 	}
 
 	return nil

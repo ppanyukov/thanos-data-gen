@@ -14,6 +14,29 @@ import (
 	"time"
 )
 
+// NewWriter create new TSDB block writer.
+//
+// The returned writer is generally not assumed to be thread-safe
+// at the moment.
+//
+// The returned writer accumulates all series in memory
+// until `Flush` is called. The repeated pattern of writes
+// and flushes is allowed e.g.:
+//
+//	for n < 1000 {
+//		// write a lot of stuff into memory
+//		w.Write()
+//		w.Write()
+//
+//		// write block to disk
+//		w.Flush()
+//  }
+//
+// The above loop will produce 1000 blocks on disk.
+//
+// Note that the writer will not check if the target directory exists or
+// contains anything at all. It is the caller's responsibility to
+// ensure that the resulting blocks do not overlap etc.
 func NewWriter(logger log.Logger, dir string) (Writer, error) {
 	res := &writerT{
 		logger: logger,
@@ -27,7 +50,8 @@ func NewWriter(logger log.Logger, dir string) (Writer, error) {
 	return res, nil
 }
 
-// writerT is implementation of Writer interface
+// writerT is implementation of Writer interface.
+// not designed to be thread-safe.
 type writerT struct {
 	// logger is given to us as arg
 	logger log.Logger
@@ -39,10 +63,11 @@ type writerT struct {
 	head     *tsdb.Head
 	appender tsdb.Appender
 
-	// metricCount is incremented internally every time we call Write
+	// MetricCount is incremented internally every time we call Write
 	metricCount int64
 }
 
+// Write implements Writer interface. Everything goes into memory until Flush.
 func (w *writerT) Write(t time.Time, v Val) error {
 	// Simply write to appender until Flush() is called.
 	w.metricCount++
@@ -54,6 +79,8 @@ func (w *writerT) Write(t time.Time, v Val) error {
 	return nil
 }
 
+// Flush implements Writer interface. This is where actual block writing
+// happens. After flush completes, more writes can continue.
 func (w *writerT) Flush() error {
 	// Flush should:
 	//  - write head to disk
@@ -74,17 +101,13 @@ func (w *writerT) Flush() error {
 	return nil
 }
 
-func (w *writerT) Close() error {
-	return w.head.Close()
-}
-
 // initHeadAndAppender creates and initialises new head and appender.
 func (w *writerT) initHeadAndAppender() error {
 	logger := w.logger
 
 	var head *tsdb.Head
 	{
-		// r and w can be nil as we don't use them
+		// random and w can be nil as we don't use them
 		var r prometheus.Registerer = nil
 		var w *wal.WAL = nil
 
@@ -114,6 +137,7 @@ func (w *writerT) writeHeadToDisk() error {
 	mint := timestamp.Time(w.head.MinTime())
 	maxt := timestamp.Time(w.head.MaxTime())
 	level.Info(w.logger).Log("series_count", seriesCount, "metric_count", w.metricCount, "mint", mint, "maxt", maxt)
+
 	// Step 2. Flush head to disk.
 	//
 	// copypasta from: github.com/prometheus/prometheus/tsdb/db.go:322
