@@ -5,18 +5,25 @@ import (
 	"time"
 )
 
-// DefaultGeneratorConfig returns new instance of default generator configuration.
-func DefaultGeneratorConfig() GeneratorConfig {
-	return GeneratorConfig{
+// NewGenerator create a generator with specified retention
+// and default config, see `newGeneratorConfig()`.
+// Retention is the time period for which data will be generated.
+func NewGenerator(retention time.Duration) Generator {
+	return &generatorT{
+		Retention:      retention,
 		StartTime:      time.Now(),
-		Retention:      24 * time.Hour,
 		SampleInterval: 15 * time.Second,
 		FlushInterval:  2 * time.Hour,
 	}
 }
 
-// GeneratorConfig configures generator.
-type GeneratorConfig struct {
+// generatorT is implementation of Generator.
+type generatorT struct {
+	// Retention is the time interval for which to generate data, e.g. 8days = 8 * 24 * time.Hour.
+	// This is how much time back from `startTime` the metrics will be generated.
+	// Retention should be multiples of `FlushInterval`.
+	Retention time.Duration
+
 	// StartTime is the time from which to generate metrics. The metrics
 	// are generated for the window [StartTime-Retention, StartTime].
 	//
@@ -25,32 +32,12 @@ type GeneratorConfig struct {
 	// the data later.
 	StartTime time.Time
 
-	// Retention is the time interval for which to generate data, e.g. 8days = 8 * 24 * time.Hour.
-	// This is how much time back from `startTime` the metrics will be generated.
-	// Retention should be multiples of `FlushInterval`.
-	Retention time.Duration
-
 	// SampleInterval is the interval between samples, say 15s.
 	SampleInterval time.Duration
 
 	// FlushInterval is the interval at which blocks are written to disk. These are usually 2h.
 	// FlushInterval should be multiples of `SampleInterval`.
 	FlushInterval time.Duration
-}
-
-// NewGenerator create a generator with all default values.
-func NewGenerator(config *GeneratorConfig) Generator {
-	// take a copy
-	configCopy := *config
-
-	return &generatorT{
-		GeneratorConfig: configCopy,
-	}
-}
-
-// generatorT is implementation of Generator.
-type generatorT struct {
-	GeneratorConfig
 }
 
 func (c *generatorT) Generate(writer Writer, valGenerators ...ValGenerator) error {
