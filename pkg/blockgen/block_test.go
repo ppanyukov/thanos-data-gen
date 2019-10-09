@@ -2,7 +2,6 @@ package blockgen
 
 import (
 	"fmt"
-	"github.com/go-kit/kit/log"
 	"github.com/pkg/errors"
 	"io/ioutil"
 	"os"
@@ -55,8 +54,7 @@ func runGenerator() error {
 	generator := NewGeneratorWithConfig(generatorConfig)
 
 	// Create block writer to write to dir
-	logger := log.NewLogfmtLogger(os.Stderr)
-	blockWriter, err := NewWriter(logger, dir)
+	blockWriter, err := NewWriter(dir)
 	if err != nil {
 		return err
 	}

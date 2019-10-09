@@ -8,6 +8,7 @@ import (
 	"github.com/prometheus/prometheus/pkg/timestamp"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
+	"os"
 	"time"
 )
 
@@ -35,7 +36,9 @@ import (
 // Note that the writer will not check if the target directory exists or
 // contains anything at all. It is the caller's responsibility to
 // ensure that the resulting blocks do not overlap etc.
-func NewWriter(logger log.Logger, dir string) (Writer, error) {
+func NewWriter(dir string) (Writer, error) {
+	logger := log.NewLogfmtLogger(os.Stderr)
+
 	res := &blockWriter{
 		logger: logger,
 		dir:    dir,
