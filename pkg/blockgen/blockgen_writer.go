@@ -5,12 +5,9 @@ import (
 	"github.com/go-kit/kit/log"
 	"github.com/go-kit/kit/log/level"
 	"github.com/pkg/errors"
-	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/prometheus/pkg/timestamp"
 	"github.com/prometheus/prometheus/tsdb"
 	"github.com/prometheus/prometheus/tsdb/chunkenc"
-	"github.com/prometheus/prometheus/tsdb/wal"
-
 	"time"
 )
 
@@ -107,15 +104,16 @@ func (w *blockWriter) initHeadAndAppender() error {
 
 	var head *tsdb.Head
 	{
-		// Registerer and WAL can be nil as we don't use them
-		var r prometheus.Registerer = nil
-		var w *wal.WAL = nil
-
 		// chunkRange determines which events are compactable.
 		// setting to 1 seems to be the right thing as want all events.
 		var chunkRange int64 = 1
 
-		h, err := tsdb.NewHead(r, logger, w, chunkRange)
+		// Registerer and WAL can be nil as we don't use them.
+		// Not declaring to avoid dependency on github.com/prometheus/client_golang
+		// var r prometheus.Registerer = nil
+		// var w *wal.WAL = nil
+
+		h, err := tsdb.NewHead(nil /*Registerer*/, logger, nil /*WAL*/, chunkRange)
 		if err != nil {
 			return errors.Wrap(err, "tsdb.NewHead")
 		}

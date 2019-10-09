@@ -9,7 +9,6 @@ go 1.13
 require (
 	github.com/go-kit/kit v0.9.0
 	github.com/pkg/errors v0.8.1
-	github.com/prometheus/client_golang v1.1.0
 	github.com/prometheus/prometheus v1.8.2-0.20190913102521-8ab628b35467
 )
 
