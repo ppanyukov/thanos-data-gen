@@ -1,43 +1,37 @@
-package tsdb
+package blockgen
 
 import (
 	"github.com/pkg/errors"
 	"time"
 )
 
-// GeneratorConfig configures the behaviour of TSDB generator.
-//
-// NOTE: it is surfaced here as there may be a need to
-// fine-tune some of these values, and esp. FlushInterval
-// by the callers.
+// GeneratorConfig configures the behaviour of block generator.
 type GeneratorConfig struct {
-	// Retention is the time interval for which to generate data, e.g. 8days = 8 * 24 * time.Hour.
-	// This is how much time back from `startTime` the metrics will be generated.
-	// Retention should be multiples of `FlushInterval`.
+	// Retention is the time interval for which to generate data, e.g.
+	// 8days = 8 * 24 * time.Hour. This is how much time back from `startTime`
+	// the metrics will go. Retention should be multiples of `FlushInterval`.
 	Retention time.Duration
 
 	// StartTime is the time from which to generate metrics. The metrics
 	// are generated for the window [StartTime-Retention, StartTime].
 	//
-	// Good default value for this is time.Now() but may want to use
-	// some fixed value to make it easier to write repeatable queries for
-	// the data later.
+	// Good default value for this is time.Now() but may want to use some fixed
+	// value to make it easier to write repeatable queries for the data later.
 	StartTime time.Time
 
-	// SampleInterval is the interval between samples, say 15s.
+	// SampleInterval is the interval between samples, 15s is default for Prometheus.
 	SampleInterval time.Duration
 
 	// FlushInterval is the interval at which blocks are written to disk.
 	// These are usually 2h.
 	// FlushInterval should be multiples of `SampleInterval`.
 	//
-	// NOTE: Flush is generally slow. Consider tuning this if
-	// you have little data or a lot of data.
+	// NOTE: Flush is generally slow.
+	// Consider tuning this if you have little data or a lot of data.
 	FlushInterval time.Duration
 }
 
-// DefaultGeneratorConfig is the default configuration with
-// specified retention.
+// DefaultGeneratorConfig is the default configuration with specified retention.
 func DefaultGeneratorConfig(retention time.Duration) GeneratorConfig {
 	return GeneratorConfig{
 		Retention:      retention,
@@ -47,8 +41,8 @@ func DefaultGeneratorConfig(retention time.Duration) GeneratorConfig {
 	}
 }
 
-// NewGenerator creates a generator with specified retention
-// and default config, see `DefaultGeneratorConfig()`.
+// NewGenerator creates a generator with specified retention and default config,
+// see `DefaultGeneratorConfig()`.
 // Retention is the time period for which data will be generated.
 func NewGenerator(retention time.Duration) Generator {
 	config := DefaultGeneratorConfig(retention)
@@ -93,10 +87,10 @@ func (g *generatorT) Generate(writer Writer, valGenerators ...ValProvider) error
 	// sizes etc, ask Bartek (:
 	// Ditto for flushInterval vs retention, as we want to produce full blocks.
 	if c.FlushInterval%c.SampleInterval != 0 {
-		return errors.New("flushInterval must be multiples of sampleInterval, e.c. 2h/15s, 2h/30s etc")
+		return errors.New("flushInterval must be multiples of sampleInterval")
 	}
 	if c.Retention%c.FlushInterval != 0 {
-		return errors.New("retention must be multiples of flushInterval, e.c. 2days/2h etc")
+		return errors.New("retention must be multiples of flushInterval")
 	}
 
 	// write stuff to TSDB from oldest to newest

@@ -1,4 +1,4 @@
-package tsdb
+package blockgen
 
 import (
 	"fmt"
@@ -21,7 +21,7 @@ type ValProviderConfig struct {
 // config and a fixed random seed. Every instance of ValProvider
 // will generate same metrics.
 //
-// TODO(ppanyukov): do we want to surface randSeed?
+// TODO(ppanyukov): do we want to surface randSeed via config?
 func NewValProvider(config ValProviderConfig) ValProvider {
 	// seed rand with fixed value to get consistent repeatable results :)
 	return &valProviderT{

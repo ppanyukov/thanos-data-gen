@@ -1,5 +1,5 @@
 //
-// Package tsdb generates synthetic time series in raw Prometheus block format.
+// Package blockgen generates synthetic time series in raw Prometheus block format.
 //
 // It is mainly designed for performance benchmarking of Thanos components.
 //
@@ -15,4 +15,4 @@
 //	// Specify how much data to generate and go
 // 	generator := NewGenerator(4 * time.Hour)
 //	generator.Generate(blockWriter, valProvider)
-package tsdb
+package blockgen

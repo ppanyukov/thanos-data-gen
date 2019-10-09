@@ -1,12 +1,12 @@
-package tsdb
+package blockgen
 
 import (
 	"github.com/prometheus/prometheus/tsdb/labels"
 	"time"
 )
 
-// Val is the named value without to write to time series db.
-// It will be timestamped by the generator.
+// Val is the named value to write to time series db. It will be timestamped by
+// the generator.
 type Val interface {
 	Val() float64
 	Labels() labels.Labels
@@ -14,8 +14,7 @@ type Val interface {
 
 // ValProvider is the generator of synthetic values.
 type ValProvider interface {
-	// Next returns a channel from which provides values
-	// for one sampling interval.
+	// Next returns a chan from which provides values for one sampling interval.
 	Next() <-chan Val
 }
 
@@ -30,9 +29,8 @@ type Writer interface {
 	Flush() error
 }
 
-// Generator generates synthetic time series using
-// values produced by supplied list of `ValProvider` and
-// writes them to TSDB blocks using supplied `Writer`.
+// Generator generates synthetic time series using values produced by supplied
+// list of `ValProvider` and writes them to TSDB blocks using supplied `Writer`.
 type Generator interface {
 	Generate(writer Writer, valGenerators ...ValProvider) error
 }

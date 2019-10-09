@@ -1,4 +1,4 @@
-package tsdb
+package blockgen
 
 import (
 	"context"
@@ -16,12 +16,10 @@ import (
 
 // NewWriter create new TSDB block writer.
 //
-// The returned writer is generally not assumed to be thread-safe
-// at the moment.
+// The returned writer is generally not assumed to be thread-safe at the moment.
 //
-// The returned writer accumulates all series in memory
-// until `Flush` is called. The repeated pattern of writes
-// and flushes is allowed e.g.:
+// The returned writer accumulates all series in memory until `Flush` is called.
+// The repeated pattern of writes and flushes is allowed e.g.:
 //
 //	for n < 1000 {
 //		// write a lot of stuff into memory
@@ -33,6 +31,9 @@ import (
 //  }
 //
 // The above loop will produce 1000 blocks on disk.
+//
+// In general flushing is slow. If you have only few samples it may be much
+// more efficient to flush just once the entire retention period.
 //
 // Note that the writer will not check if the target directory exists or
 // contains anything at all. It is the caller's responsibility to
@@ -50,20 +51,19 @@ func NewWriter(logger log.Logger, dir string) (Writer, error) {
 	return res, nil
 }
 
-// writerT is implementation of Writer interface.
-// not designed to be thread-safe.
+// writerT is implementation of Writer interface. Not designed to be thread-safe.
 type writerT struct {
-	// logger is given to us as arg
+	// logger is given to us as arg.
 	logger log.Logger
 
-	// dir is output directory, given to us as arg
+	// dir is output directory, given to us as arg.
 	dir string
 
-	// prometheus specific things, created by us
+	// prometheus specific things, created and managed by us.
 	head     *tsdb.Head
 	appender tsdb.Appender
 
-	// MetricCount is incremented internally every time we call Write
+	// metricCount is incremented internally every time Write is called.
 	metricCount int64
 }
 
@@ -107,12 +107,12 @@ func (w *writerT) initHeadAndAppender() error {
 
 	var head *tsdb.Head
 	{
-		// random and w can be nil as we don't use them
+		// Registerer and WAL can be nil as we don't use them
 		var r prometheus.Registerer = nil
 		var w *wal.WAL = nil
 
 		// chunkRange determines which events are compactable.
-		// setting to 1 seems to be the right thing.
+		// setting to 1 seems to be the right thing as want all events.
 		var chunkRange int64 = 1
 
 		h, err := tsdb.NewHead(r, logger, w, chunkRange)
@@ -133,23 +133,34 @@ func (w *writerT) writeHeadToDisk() error {
 	if err := w.appender.Commit(); err != nil {
 		return errors.Wrap(err, "appender.Commit")
 	}
+
 	seriesCount := w.head.NumSeries()
 	mint := timestamp.Time(w.head.MinTime())
 	maxt := timestamp.Time(w.head.MaxTime())
-	level.Info(w.logger).Log("series_count", seriesCount, "metric_count", w.metricCount, "mint", mint, "maxt", maxt)
+	level.Info(w.logger).Log(
+		"series_count", seriesCount,
+		"metric_count", w.metricCount,
+		"mint", mint,
+		"maxt", maxt)
 
 	// Step 2. Flush head to disk.
 	//
 	// copypasta from: github.com/prometheus/prometheus/tsdb/db.go:322
 	//
 	// Add +1 millisecond to block maxt because block intervals are half-open: [b.MinTime, b.MaxTime).
+	//
 	// Because of this block intervals are always +1 than the total samples it includes.
 	{
 		int_mint := timestamp.FromTime(mint)
 		int_maxt := timestamp.FromTime(maxt)
 
 		// TODO(ppanyukov): what exactly is "ranges" arg here?
-		compactor, err := tsdb.NewLeveledCompactor(context.Background(), nil, w.logger, tsdb.DefaultOptions.BlockRanges, chunkenc.NewPool())
+		compactor, err := tsdb.NewLeveledCompactor(
+			context.Background(),
+			nil,
+			w.logger,
+			tsdb.DefaultOptions.BlockRanges,
+			chunkenc.NewPool())
 		if err != nil {
 			return errors.Wrap(err, "create leveled compactor")
 		}
