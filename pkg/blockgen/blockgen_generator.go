@@ -52,8 +52,8 @@ func NewGenerator(retention time.Duration) Generator {
 	}
 }
 
-// NewGenerator2 creates a generator with user-supplied config.
-func NewGenerator2(config GeneratorConfig) Generator {
+// NewGeneratorWithConfig creates a generator with user-supplied config.
+func NewGeneratorWithConfig(config GeneratorConfig) Generator {
 	return &generatorT{
 		config: config,
 	}

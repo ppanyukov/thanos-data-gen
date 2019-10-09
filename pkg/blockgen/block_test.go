@@ -52,7 +52,7 @@ func runGenerator() error {
 	generatorConfig := DefaultGeneratorConfig(2 * time.Minute)
 	generatorConfig.SampleInterval = 15 * time.Second
 	generatorConfig.FlushInterval = 2 * time.Minute
-	generator := NewGenerator2(generatorConfig)
+	generator := NewGeneratorWithConfig(generatorConfig)
 
 	// Create block writer to write to dir
 	logger := log.NewLogfmtLogger(os.Stderr)
