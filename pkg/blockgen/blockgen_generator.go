@@ -47,25 +47,25 @@ func DefaultGeneratorConfig(retention time.Duration) GeneratorConfig {
 func NewGenerator(retention time.Duration) Generator {
 	config := DefaultGeneratorConfig(retention)
 
-	return &generatorT{
+	return &generator{
 		config: config,
 	}
 }
 
 // NewGeneratorWithConfig creates a generator with user-supplied config.
 func NewGeneratorWithConfig(config GeneratorConfig) Generator {
-	return &generatorT{
+	return &generator{
 		config: config,
 	}
 }
 
-// generatorT is implementation of Generator.
-type generatorT struct {
+// generator is implementation of Generator.
+type generator struct {
 	config GeneratorConfig
 }
 
 // Generate implements Generator interface.
-func (g *generatorT) Generate(writer Writer, valGenerators ...ValProvider) error {
+func (g *generator) Generate(writer Writer, valGenerators ...ValProvider) error {
 	c := &g.config
 
 	// Basic sanity checks.

@@ -24,20 +24,20 @@ type ValProviderConfig struct {
 // TODO(ppanyukov): do we want to surface randSeed via config?
 func NewValProvider(config ValProviderConfig) ValProvider {
 	// seed rand with fixed value to get consistent repeatable results :)
-	return &valProviderT{
+	return &valProvider{
 		config: config,
 		random: rand.New(rand.NewSource(454)),
 	}
 }
 
-// valProviderT is implementation of `ValProvider`.
-type valProviderT struct {
+// valProvider is implementation of `ValProvider`.
+type valProvider struct {
 	config ValProviderConfig
 	random *rand.Rand
 }
 
 // Next implements ValProvider interface.
-func (g *valProviderT) Next() <-chan Val {
+func (g *valProvider) Next() <-chan Val {
 	c := make(chan Val)
 
 	go func() {
@@ -64,7 +64,7 @@ func (g *valProviderT) Next() <-chan Val {
 
 				value := float64(random.Intn(1000))
 
-				c <- &valAdapterT{v: value, l: ourLabels}
+				c <- &valAdapter{v: value, l: ourLabels}
 				counter++
 			}
 		}
@@ -75,16 +75,16 @@ func (g *valProviderT) Next() <-chan Val {
 
 // valAdapter is a small implementation of Val.
 // NOTE: it assumes the labels are already sorted!
-type valAdapterT struct {
+type valAdapter struct {
 	v float64
 	l []labels.Label
 }
 
-func (v *valAdapterT) Val() float64 {
+func (v *valAdapter) Val() float64 {
 	return v.v
 }
 
-func (v *valAdapterT) Labels() labels.Labels {
+func (v *valAdapter) Labels() labels.Labels {
 	// simple cast, assume labels are sorted already
 	return labels.Labels(v.l)
 }

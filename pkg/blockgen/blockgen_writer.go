@@ -39,7 +39,7 @@ import (
 // contains anything at all. It is the caller's responsibility to
 // ensure that the resulting blocks do not overlap etc.
 func NewWriter(logger log.Logger, dir string) (Writer, error) {
-	res := &writerT{
+	res := &blockWriter{
 		logger: logger,
 		dir:    dir,
 	}
@@ -51,8 +51,8 @@ func NewWriter(logger log.Logger, dir string) (Writer, error) {
 	return res, nil
 }
 
-// writerT is implementation of Writer interface. Not designed to be thread-safe.
-type writerT struct {
+// blockWriter is implementation of Writer interface. Not designed to be thread-safe.
+type blockWriter struct {
 	// logger is given to us as arg.
 	logger log.Logger
 
@@ -68,7 +68,7 @@ type writerT struct {
 }
 
 // Write implements Writer interface. Everything goes into memory until Flush.
-func (w *writerT) Write(t time.Time, v Val) error {
+func (w *blockWriter) Write(t time.Time, v Val) error {
 	// Simply write to appender until Flush() is called.
 	w.metricCount++
 
@@ -81,7 +81,7 @@ func (w *writerT) Write(t time.Time, v Val) error {
 
 // Flush implements Writer interface. This is where actual block writing
 // happens. After flush completes, more writes can continue.
-func (w *writerT) Flush() error {
+func (w *blockWriter) Flush() error {
 	// Flush should:
 	//  - write head to disk
 	//  - close head
@@ -102,7 +102,7 @@ func (w *writerT) Flush() error {
 }
 
 // initHeadAndAppender creates and initialises new head and appender.
-func (w *writerT) initHeadAndAppender() error {
+func (w *blockWriter) initHeadAndAppender() error {
 	logger := w.logger
 
 	var head *tsdb.Head
@@ -129,7 +129,7 @@ func (w *writerT) initHeadAndAppender() error {
 }
 
 // writeHeadToDisk commits the appender and writes the head to disk.
-func (w *writerT) writeHeadToDisk() error {
+func (w *blockWriter) writeHeadToDisk() error {
 	if err := w.appender.Commit(); err != nil {
 		return errors.Wrap(err, "appender.Commit")
 	}
