@@ -10,7 +10,7 @@
 //	valProvider := NewValProvider(valProviderConfig)
 //
 //	// Create block writer to write to dir
-//	blockWriter, _ := NewWriter(logger, dir)
+//	blockWriter, _ := NewBlockWriter(logger, dir)
 //
 //	// Specify how much data to generate and go
 // 	generator := NewGenerator(4 * time.Hour)

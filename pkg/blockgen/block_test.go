@@ -54,7 +54,7 @@ func runGenerator() error {
 	generator := NewGeneratorWithConfig(generatorConfig)
 
 	// Create block writer to write to dir
-	blockWriter, err := NewWriter(dir)
+	blockWriter, err := NewBlockWriter(dir)
 	if err != nil {
 		return err
 	}

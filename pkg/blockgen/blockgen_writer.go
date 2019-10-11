@@ -12,7 +12,7 @@ import (
 	"time"
 )
 
-// NewWriter create new TSDB block writer.
+// NewBlockWriter create new TSDB block writer.
 //
 // The returned writer is generally not assumed to be thread-safe at the moment.
 //
@@ -36,7 +36,7 @@ import (
 // Note that the writer will not check if the target directory exists or
 // contains anything at all. It is the caller's responsibility to
 // ensure that the resulting blocks do not overlap etc.
-func NewWriter(dir string) (Writer, error) {
+func NewBlockWriter(dir string) (Writer, error) {
 	logger := log.NewLogfmtLogger(os.Stderr)
 
 	res := &blockWriter{

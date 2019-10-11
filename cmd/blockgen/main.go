@@ -81,9 +81,9 @@ func run(p runProfile) error {
 		}
 	}
 
-	writer, err := blockgen.NewWriter(p.outDir)
+	writer, err := blockgen.NewBlockWriter(p.outDir)
 	if err != nil {
-		return errors.Wrap(err, "blockgen.NewWriter")
+		return errors.Wrap(err, "blockgen.NewBlockWriter")
 	}
 
 	valProvider := blockgen.NewValProvider(p.valConfig)
