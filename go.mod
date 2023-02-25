@@ -14,7 +14,7 @@ require (
 	github.com/prometheus/prometheus v1.8.2-0.20190913102521-8ab628b35467
 	github.com/stretchr/testify v1.4.0 // indirect
 	go.uber.org/automaxprocs v1.2.0
-	golang.org/x/sys v0.0.0-20190924154521-2837fb4f24fe // indirect
+	golang.org/x/sys v0.1.0 // indirect
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 )
 
